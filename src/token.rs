@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::lexer::Lexer;
 
 
@@ -26,10 +28,21 @@ pub enum TokenType {
     LET
 }
 
+
+#[derive(Debug)]
 pub struct Token{
     pub t: TokenType,
-    pub literal: char
+    pub literal: String
 }
+
+
 impl Token {
 
+    pub fn lookup_identifier(s: &str)-> TokenType{
+        match s {
+            "let" => TokenType::LET,
+            "fun" => TokenType::FUNCTION,
+            _ => TokenType::IDENT
+        }
+    }
 }
