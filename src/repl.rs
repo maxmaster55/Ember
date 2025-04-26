@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use crate::{lexer::Lexer, token::{Token, TokenType}};
+use crate::{lexer::Lexer, token::TokenType};
 
 
 
@@ -11,13 +11,13 @@ const PROMPT: &str = "=>";
 pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
     loop {
         write!(writer, "{} ", PROMPT).expect("Error with the writer");
-        writer.flush();
+        let _ = writer.flush();
 
         let mut written = String::new();
         reader.read_line(&mut written).expect("Error reading input!");
 
         write!(writer, "in {}", written).expect("Error with the writer");
-        writer.flush();
+        let _ = writer.flush();
 
 
         let mut l = Lexer::new(written);
