@@ -16,7 +16,6 @@ pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
         let mut written = String::new();
         reader.read_line(&mut written).expect("Error reading input!");
 
-        write!(writer, "in {}", written).expect("Error with the writer");
         let _ = writer.flush();
 
 
