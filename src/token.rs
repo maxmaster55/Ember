@@ -13,9 +13,16 @@ pub enum TokenType {
     IDENT,
     INT,
     
+    // operators
     ASSIGN,
     PLUS,
-    
+    MINUS,
+    BANG,
+    STAR,
+    SLASH,
+    GT,
+    LT,
+
     COMMA,
     SEMICOLON,
     
@@ -23,9 +30,21 @@ pub enum TokenType {
     RPAREN,
     LBRACE,
     RBRACE,
+
+    // cond
+    EQ,
+    NEQ,
     
+
+    // keywords
     FUNCTION,
-    LET
+    LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
+
 }
 
 
@@ -40,9 +59,14 @@ impl Token {
 
     pub fn lookup_identifier(s: &str)-> TokenType{
         match s {
-            "let" => TokenType::LET,
-            "fun" => TokenType::FUNCTION,
-            _ => TokenType::IDENT
+            "let"   => TokenType::LET,
+            "fun"   => TokenType::FUNCTION,
+            "true"   => TokenType::TRUE,
+            "false"   => TokenType::FALSE,
+            "if"   => TokenType::IF,
+            "else"   => TokenType::ELSE,
+            "return"   => TokenType::RETURN,
+            _       => TokenType::IDENT
         }
     }
 }
