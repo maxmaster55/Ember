@@ -1,7 +1,5 @@
 
-
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
