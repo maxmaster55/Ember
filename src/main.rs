@@ -3,7 +3,8 @@ use std::io::{self, BufReader};
 mod token;
 mod lexer;
 mod repl;
-
+mod parser;
+mod ast;
 
 use repl::start;
 
