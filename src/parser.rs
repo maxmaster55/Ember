@@ -71,18 +71,36 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Option<Expression> {
-        if self.current_token.t == TokenType::INT {
+        let mut left = if self.current_token.t == TokenType::INT {
             let value = self.current_token.literal.parse().ok()?;
-            if self.peek_token.t != TokenType::SEMICOLON{
-                self.parse_infix_expression()
-            }else {
-                Some(Expression::INT(value))
-            }
-        }else {
-            None
+            Expression::INT(value)
+        } else {
+            return None;
+        };
+    
+        while self.peek_token.t == TokenType::PLUS || self.peek_token.t == TokenType::STAR {
+            self.next_token(); // move to operator
+    
+            let operator = self.current_token.literal.clone();
+    
+            self.next_token(); // move to right-hand side INT
+            let right = if self.current_token.t == TokenType::INT {
+                let value = self.current_token.literal.parse().ok()?;
+                Expression::INT(value)
+            } else {
+                return None;
+            };
+    
+            left = Expression::INFEX {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            };
         }
-
+    
+        Some(left)
     }
+    
 
     fn parse_infix_expression(&mut self) -> Option<Expression> {
         
@@ -179,6 +197,54 @@ mod tests {
             }
             _ => panic!("Expected LetStatement"),
         }
+    }
+
+    #[test]
+    fn test_parse_expression_without_semicolon() {
+        let input = "
+        let result = 5 + 10
+        ";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        assert_eq!(program.statements.len(), 0, "Expected no valid statements due to missing semicolon");
+    }
+
+    #[test]
+    fn test_parse_invalid_infix_expression() {
+        let input = "
+        let result = 5 + ;
+        ";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        assert_eq!(program.statements.len(), 0, "Expected no valid statements due to invalid infix expression");
+    }
+
+    #[test]
+    fn test_parse_empty_input() {
+        let input = "";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        assert_eq!(program.statements.len(), 0, "Expected no statements for empty input");
+    }
+
+    #[test]
+    fn test_parse_only_semicolon() {
+        let input = ";";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        assert_eq!(program.statements.len(), 0, "Expected no statements for input with only a semicolon");
     }
 
     #[test]
