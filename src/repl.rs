@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use crate::{lexer::Lexer, token::TokenType};
+use crate::{lexer::Lexer, parser::{self, Parser}, token::TokenType};
 
 
 
@@ -16,16 +16,17 @@ pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
         let mut written = String::new();
         reader.read_line(&mut written).expect("Error reading input!");
 
-        let _ = writer.flush();
+        if written.trim().is_empty() {
+            continue; // Skip empty input
+        }
 
+        let lexer = Lexer::new(written);
+        let mut parser = Parser::new(lexer);
 
-        let mut l = Lexer::new(written);
-        
-        let mut tok = l.next_token();
+        let program = parser.parse_program();
 
-        while tok.t != TokenType::EOF {
-            println!("{:?}", tok);
-            tok = l.next_token();
+        for statement in program.statements {
+            writeln!(writer, "{:?}", statement).expect("Error writing output");
         }
     }
 }

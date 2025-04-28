@@ -16,6 +16,8 @@ fn main() {
     let stdout = io::stdout();
     // lock to protect 
     let writer = stdout.lock();
-
     start(reader, writer);
+
+
+    
 }

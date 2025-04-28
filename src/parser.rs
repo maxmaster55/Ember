@@ -1,13 +1,13 @@
 use crate::{ast::{Expression, LetStatement, Program, Statement}, lexer::Lexer, token::{Token, TokenType}};
 
-struct Parser {
+pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peek_token: Token,
 }
 
 impl Parser {
-    fn new(mut lexer: Lexer) -> Self {
+    pub fn new(mut lexer: Lexer) -> Self {
         let current_token = lexer.next_token();
         let peek_token = lexer.next_token();
         return Self {
@@ -21,12 +21,14 @@ impl Parser {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
-    fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Program {
         let mut statements = vec![];
 
         while self.current_token.t != TokenType::EOF {
             if let Some(stmt) = self.parse_statement() {
                 statements.push(stmt);
+            }else {
+                println!("Error");
             }
             self.next_token();
         }
@@ -60,7 +62,11 @@ impl Parser {
 
         let value = self.parse_expression()?;
 
-        self.next_token(); // skip semicolon
+        self.next_token();
+        match self.current_token.t {
+            TokenType::SEMICOLON => {},
+            _ => return None
+        }
         Some(Statement::Let(LetStatement { name, value }))
     }
 
