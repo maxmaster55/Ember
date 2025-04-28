@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
@@ -15,13 +14,18 @@ pub struct LetStatement {
     pub value: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     INT(i64),
-    INFEX{
+    INFEX {
         left: Box<Expression>,
-        operator:String,
-        right:Box<Expression>
+        operator: String,
+        right: Box<Expression>,
     },
-
+    IDENT(String), // For identifiers
+    BOOLEAN(bool), // For boolean literals
+    PREFIX {
+        operator: String,
+        right: Box<Expression>,
+    }, // For prefix expressions like `!true` or `-5`
 }

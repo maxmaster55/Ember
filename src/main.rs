@@ -18,6 +18,4 @@ fn main() {
     let writer = stdout.lock();
     start(reader, writer);
 
-
-    
 }
