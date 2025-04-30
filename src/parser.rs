@@ -242,7 +242,6 @@ impl Parser {
                 })?;
                 Ok(Expression::INT(value))
             }
-            TokenType::IDENT => Ok(Expression::IDENT(self.current_token.literal.clone())),
             TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
             TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
             TokenType::BANG | TokenType::MINUS => self.parse_prefix_expression(),
