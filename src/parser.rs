@@ -115,7 +115,7 @@ pub fn parse_program(&mut self) -> Result<Program, String> {
         let mut code= vec![];
 
         while self.current_token.t != TokenType::RBRACE {
-            
+
             let stmnt = self.parse_statement()?;
             code.push(stmnt);
     
@@ -506,4 +506,44 @@ mod tests {
             _ => panic!("Expected IfStatement"),
         }
     }
+
+    // add test for if statment with multiple statements
+    #[test]
+    fn test_parse_if_statement_with_multiple_statements() {
+        let input = "
+        if true {
+            let x = 5;
+            let y = 10;
+        }
+        ";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        match &program.statements[0] {
+            Statement::If(if_stmt) => {
+                assert_eq!(if_stmt.cond, Expression::BOOLEAN(true));
+                assert_eq!(if_stmt.code.len(), 2);
+                match &if_stmt.code[0] {
+                    Statement::Let(let_stmt) => {
+                        assert_eq!(let_stmt.name, "x");
+                        assert_eq!(let_stmt.value, Expression::INT(5));
+                    }
+                    _ => panic!("Expected LetStatement"),
+                }
+                match &if_stmt.code[1] {
+                    Statement::Let(let_stmt) => {
+                        assert_eq!(let_stmt.name, "y");
+                        assert_eq!(let_stmt.value, Expression::INT(10));
+                    }
+                    _ => panic!("Expected LetStatement"),
+                }
+            }
+            _ => panic!("Expected IfStatement"),
+        }
+    }
+
 }
