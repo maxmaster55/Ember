@@ -131,7 +131,30 @@ pub fn parse_program(&mut self) -> Result<Program, String> {
         }
         self.next_token(); // Skip the '}'
 
-        return Ok(Statement::If(IfStatement { cond, code }));
+        // Check for optional else block
+        if self.current_token.t == TokenType::ELSE {
+            self.next_token(); // Skip the "else" token
+            if self.current_token.t != TokenType::LBRACE {
+                return Err("Expected '{' after 'else'".to_string());
+            }
+            self.next_token(); // Skip the '{'
+            let mut else_code = vec![];
+
+            while self.current_token.t != TokenType::RBRACE {
+                let stmnt = self.parse_statement()?;
+                else_code.push(stmnt);
+                self.next_token(); // Skip the ';'
+            }
+
+            if self.current_token.t != TokenType::RBRACE {
+                return Err("Expected '}' after 'else' block".to_string());
+            }
+            self.next_token(); // Skip the '}'
+
+            return Ok(Statement::If(IfStatement { cond, code, else_code: Some(else_code) }));
+        }
+
+        return Ok(Statement::If(IfStatement { cond, code, else_code: None })); // No else block
     }
 
 

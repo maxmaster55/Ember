@@ -18,7 +18,8 @@ pub struct LetStatement {
 #[derive(Debug)]
 pub struct IfStatement {
     pub cond: Expression,
-    pub code: Vec<Statement>
+    pub code: Vec<Statement>,
+    pub else_code: Option<Vec<Statement>>,
 }
 
 #[derive(Debug, PartialEq)]
