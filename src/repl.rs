@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use crate::{lexer::Lexer, parser::{self, Parser}, token::TokenType};
+use crate::{lexer::Lexer, parser::Parser};
 
 
 
@@ -23,7 +23,7 @@ pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
         let lexer = Lexer::new(written);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program().unwrap();
 
         for statement in program.statements {
             writeln!(writer, "{:?}", statement).expect("Error writing output");

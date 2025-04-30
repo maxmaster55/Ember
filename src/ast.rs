@@ -6,12 +6,19 @@ pub struct Program {
 #[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),
+    If(IfStatement)
 }
 
 #[derive(Debug)]
 pub struct LetStatement {
     pub name: String,
     pub value: Expression,
+}
+
+#[derive(Debug)]
+pub struct IfStatement {
+    pub cond: Expression,
+    pub code: Vec<Statement>
 }
 
 #[derive(Debug, PartialEq)]
