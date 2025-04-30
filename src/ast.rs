@@ -3,24 +3,29 @@ pub struct Program {
     pub statements: Vec<Statement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     Let(LetStatement),
-    If(IfStatement)
+    Return(ReturnStatement),
+    Expression(ExpressionStatement),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LetStatement {
     pub name: String,
     pub value: Expression,
 }
 
-#[derive(Debug)]
-pub struct IfStatement {
-    pub cond: Expression,
-    pub code: Vec<Statement>,
-    pub else_code: Option<Vec<Statement>>,
+#[derive(Debug, PartialEq)]
+pub struct ReturnStatement {
+    pub return_value: Expression,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct ExpressionStatement {
+    pub expression: Expression,
+}
+
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -30,10 +35,24 @@ pub enum Expression {
         operator: String,
         right: Box<Expression>,
     },
-    IDENT(String), // For identifiers
-    BOOLEAN(bool), // For boolean literals
+    IDENT(String),
+    BOOLEAN(bool),
     PREFIX {
         operator: String,
         right: Box<Expression>,
-    }, // For prefix expressions like `!true` or `-5`
+    },
+    IF {
+        condition: Box<Expression>,
+        consequence: Vec<Statement>,
+        alternative: Option<Vec<Statement>>
+    },
+    FUNCTION {
+        parameters: Vec<String>,
+        body: Box<Statement>,
+    },
+    CALL {
+        function: Box<Expression>,
+        arguments: Vec<Expression>,
+    },
 }
+
