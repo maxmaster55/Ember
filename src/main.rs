@@ -10,7 +10,7 @@ use repl::start;
 
 fn main() {
     let stdin = io::stdin();
-    // to add some funtion with "read_line"
+    // to add "read_line" for the stdin
     let reader = BufReader::new(stdin.lock()); 
 
     let stdout = io::stdout();
