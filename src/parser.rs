@@ -124,6 +124,7 @@ impl Parser {
 
         let ret: Result<Expression, String> = match condition {
             Expression::BOOLEAN(_) => Ok(condition),
+            Expression::PREFIX{operator: _, right: _} => Ok(condition),
             Expression::INFEX { ref operator, .. }
                 if operator == "==" || operator == "!=" || operator == ">" || operator == "<" =>
             {
@@ -219,9 +220,12 @@ impl Parser {
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, String> {
-        let operator = self.current_token.literal.clone();
-
         self.next_token(); // Move to the right-hand side
+        
+        let operator = self.current_token.literal.clone();
+        
+        println!("OP ==> {}", operator);
+        
         let right = self
             .parse_primary_expression()
             .map_err(|err| format!("Error parsing right-hand side of infix expression: {}", err))?;
@@ -247,6 +251,7 @@ impl Parser {
             TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
             TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
             TokenType::BANG | TokenType::MINUS => self.parse_prefix_expression(),
+            TokenType::IDENT => self.parse_infix_expression(Expression::IDENT(self.current_token.literal.clone())),
             _ => Err(format!(
                 "Unexpected token {:?} in primary expression",
                 self.current_token
