@@ -159,8 +159,7 @@ impl Parser {
             self.next_token(); // Skip the ';'
         }
 
-        println!("token: {:?}", self.current_token);
-
+        // Check for the closing brace
         if self.current_token.t != TokenType::RBRACE {
             return Err("Expected '}' after an IF condition".to_string());
         }
@@ -200,18 +199,21 @@ impl Parser {
         });
     }
 
+    fn is_operator(tok:&Token) -> bool{
+        return tok.t == TokenType::PLUS
+        || tok.t == TokenType::STAR
+        || tok.t == TokenType::MINUS
+        || tok.t == TokenType::SLASH
+        || tok.t == TokenType::GT
+        || tok.t == TokenType::LT
+        || tok.t == TokenType::EQ
+        || tok.t == TokenType::NEQ
+    }
+
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_primary_expression()?;
 
-        while self.peek_token.t == TokenType::PLUS
-            || self.peek_token.t == TokenType::STAR
-            || self.peek_token.t == TokenType::MINUS
-            || self.peek_token.t == TokenType::SLASH
-            || self.peek_token.t == TokenType::GT
-            || self.peek_token.t == TokenType::LT
-            || self.peek_token.t == TokenType::EQ
-            || self.peek_token.t == TokenType::NEQ
-        {
+        while Parser::is_operator(&self.peek_token) {
             self.next_token(); // Move to operator
             left = self.parse_infix_expression(left)?;
         }
@@ -224,8 +226,8 @@ impl Parser {
         
         let operator = self.current_token.literal.clone();
         
-        println!("OP ==> {}", operator);
-        
+        self.next_token();
+
         let right = self
             .parse_primary_expression()
             .map_err(|err| format!("Error parsing right-hand side of infix expression: {}", err))?;
@@ -251,7 +253,15 @@ impl Parser {
             TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
             TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
             TokenType::BANG | TokenType::MINUS => self.parse_prefix_expression(),
-            TokenType::IDENT => self.parse_infix_expression(Expression::IDENT(self.current_token.literal.clone())),
+            TokenType::IDENT => {
+                if Parser::is_operator(&self.peek_token) {
+                    return self.parse_infix_expression(Expression::IDENT(
+                        self.current_token.literal.clone(),
+                    ));
+                }else {
+                    return Ok(Expression::IDENT(self.current_token.literal.clone()));
+                }
+            },
             _ => Err(format!(
                 "Unexpected token {:?} in primary expression",
                 self.current_token
