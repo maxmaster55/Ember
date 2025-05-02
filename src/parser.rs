@@ -40,7 +40,9 @@ impl Parser {
                 Ok(stmt) => statements.push(stmt),
                 Err(err) => {
                     eprintln!("Error parsing statement: {}", err);
-                    self.next_token(); // Skip the invalid token
+                    while self.current_token.t != TokenType::EOF {
+                        self.next_token(); // Skip to end
+                    }
                 }
             }
         }
@@ -120,7 +122,7 @@ impl Parser {
     fn parse_condition(&mut self) -> Result<Expression, String> {
         let condition = self.parse_expression()?;
 
-        let ret = match condition {
+        let ret: Result<Expression, String> = match condition {
             Expression::BOOLEAN(_) => Ok(condition),
             Expression::INFEX { ref operator, .. }
                 if operator == "==" || operator == "!=" || operator == ">" || operator == "<" =>
@@ -240,7 +242,7 @@ impl Parser {
                 let value = self.current_token.literal.parse().map_err(|_| {
                     format!("Invalid integer literal: {}", self.current_token.literal)
                 })?;
-                Ok(Expression::INT(value))
+                return Ok(Expression::INT(value));
             }
             TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
             TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
