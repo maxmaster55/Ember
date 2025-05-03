@@ -63,7 +63,6 @@ impl Parser {
             }
         };
 
-        println!("Current token: {:?}", self.current_token);
         if self.peek_token.t == TokenType::SEMICOLON {
             self.next_token();
         }
@@ -219,6 +218,11 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_primary_expression()?;
 
+
+        if self.peek_token.t == TokenType::RPAREN {
+            self.next_token();
+        }
+
         // Continue parsing infix expressions while we see operators
         // and we haven't hit a closing parenthesis
         while Parser::is_operator(&self.peek_token) {
@@ -250,6 +254,8 @@ impl Parser {
     
 
     fn parse_primary_expression(&mut self) -> Result<Expression, String> {
+
+
         match self.current_token.t {
             TokenType::IF => self.parse_if_expression(),
             TokenType::INT => self.parse_integer_literal(),
@@ -271,13 +277,6 @@ impl Parser {
     
         // Now advance once to move to the next token, which should be ')'
         self.next_token();
-    
-        if self.current_token.t != TokenType::RPAREN {
-            return Err(format!(
-                "Expected ')', found {:?} after expression",
-                self.current_token
-            ));
-        }
         
         Ok(expr)
     }
@@ -289,7 +288,7 @@ impl Parser {
             .literal
             .parse()
             .map_err(|_| format!("Invalid integer literal: {}", self.current_token.literal))?;
-        
+
         Ok(Expression::INT(value))
     }
 
