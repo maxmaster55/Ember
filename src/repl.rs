@@ -8,9 +8,12 @@ const PROMPT: &str = "=>";
 
 
 // any type that implements the read trait
-pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
+pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W, is_file: bool) {
     loop {
-        write!(writer, "{} ", PROMPT).expect("Error with the writer");
+        if !is_file{
+            write!(writer, "{} ", PROMPT).expect("Error with the writer");
+        }
+
         let _ = writer.flush();
 
         let mut written = String::new();
@@ -28,5 +31,10 @@ pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W) {
         for statement in program.statements {
             writeln!(writer, "{:?}", statement).expect("Error writing output");
         }
+
+        if is_file {
+            break;
+        }       
+
     }
 }
