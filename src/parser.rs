@@ -51,21 +51,38 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<Statement, String> {
-        match self.current_token.t {
+        let stmnt = match self.current_token.t {
             TokenType::LET => self.parse_let_statement(),
             TokenType::RETURN => self.parse_return_statement(),
             _ => {
                 // Treat expressions as valid statements
                 let expr = self.parse_expression()?;
-                Ok(Statement::Expression(ExpressionStatement { expression: expr }))
+                Ok(Statement::Expression(ExpressionStatement {
+                    expression: expr,
+                }))
             }
+        };
+
+        // Move to the next token
+        self.next_token();
+        // expect semicolon
+        if self.current_token.t != TokenType::SEMICOLON {
+            return Err(format!(
+                "Expected ';' after statement, found {:?}",
+                self.current_token
+            ));
         }
+        return stmnt;
+
     }
 
-    fn parse_let_statement(&mut self) -> Result<Statement, String> {
-        self.next_token();
 
-        let name = match &self.current_token.t {
+    fn parse_let_statement(&mut self) -> Result<Statement, String> {
+        // Move to the identifier
+        self.next_token();
+    
+        // Expect identifier
+        let identifier = match &self.current_token.t {
             TokenType::IDENT => self.current_token.literal.clone(),
             _ => {
                 return Err(format!(
@@ -74,45 +91,32 @@ impl Parser {
                 ));
             }
         };
-
-        self.next_token(); // Expect '='
+    
+        // Expect '='
+        self.next_token();
         if self.current_token.t != TokenType::ASSIGN {
             return Err(format!(
-                "Expected '=', found {:?} after identifier '{}'",
-                self.current_token, name
+                "Expected '=', found {:?}",
+                self.current_token
             ));
         }
-
+    
+        // Move to the start of the expression
         self.next_token();
-
-        let value = self.parse_expression()?; // Parse the expression
-
-        self.next_token();
-        match self.current_token.t {
-            TokenType::SEMICOLON => {}
-            _ => {
-                return Err(format!(
-                    "Expected ';' after expression, found {:?}",
-                    self.current_token
-                ));
-            }
-        }
-
-        Ok(Statement::Let(LetStatement { name, value }))
+    
+        // Parse the expression on the right-hand side of the assignment
+        let value = self.parse_expression()?;
+    
+        // Construct the let statement
+        Ok(Statement::Let( LetStatement{name: identifier,value} ))
     }
+    
+
 
     fn parse_return_statement(&mut self) -> Result<Statement, String> {
         self.next_token(); // Skip the "return" token
 
         let value = self.parse_expression()?;
-
-        self.next_token(); // Expect ';'
-        if self.current_token.t != TokenType::SEMICOLON {
-            return Err(format!(
-                "Expected ';' after return value, found {:?}",
-                self.current_token
-            ));
-        }
 
         Ok(Statement::Return(ReturnStatement {
             return_value: value,
@@ -124,7 +128,10 @@ impl Parser {
 
         let ret: Result<Expression, String> = match condition {
             Expression::BOOLEAN(_) => Ok(condition),
-            Expression::PREFIX{operator: _, right: _} => Ok(condition),
+            Expression::PREFIX {
+                operator: _,
+                right: _,
+            } => Ok(condition),
             Expression::INFEX { ref operator, .. }
                 if operator == "==" || operator == "!=" || operator == ">" || operator == "<" =>
             {
@@ -199,21 +206,23 @@ impl Parser {
         });
     }
 
-    fn is_operator(tok:&Token) -> bool{
+    fn is_operator(tok: &Token) -> bool {
         return tok.t == TokenType::PLUS
-        || tok.t == TokenType::STAR
-        || tok.t == TokenType::MINUS
-        || tok.t == TokenType::SLASH
-        || tok.t == TokenType::GT
-        || tok.t == TokenType::LT
-        || tok.t == TokenType::EQ
-        || tok.t == TokenType::NEQ
+            || tok.t == TokenType::STAR
+            || tok.t == TokenType::MINUS
+            || tok.t == TokenType::SLASH
+            || tok.t == TokenType::GT
+            || tok.t == TokenType::LT
+            || tok.t == TokenType::EQ
+            || tok.t == TokenType::NEQ;
     }
 
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_primary_expression()?;
 
-        while Parser::is_operator(&self.peek_token) {
+        // Continue parsing infix expressions while we see operators
+        // and we haven't hit a closing parenthesis
+        while Parser::is_operator(&self.peek_token) && self.peek_token.t != TokenType::RPAREN {
             self.next_token(); // Move to operator
             left = self.parse_infix_expression(left)?;
         }
@@ -222,50 +231,84 @@ impl Parser {
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, String> {
-        self.next_token(); // Move to the right-hand side
-        
+        // self.next_token(); <-- REMOVE THIS LINE
+    
         let operator = self.current_token.literal.clone();
-        
-        self.next_token();
-
+    
+        self.next_token(); // Move to the right-hand side expression
+    
         let right = self
-            .parse_primary_expression()
+            .parse_expression()
             .map_err(|err| format!("Error parsing right-hand side of infix expression: {}", err))?;
-
+    
         Ok(Expression::INFEX {
             left: Box::new(left),
             operator,
             right: Box::new(right),
         })
     }
+    
 
     fn parse_primary_expression(&mut self) -> Result<Expression, String> {
         match self.current_token.t {
-            TokenType::IF => {
-                return self.parse_if_expression();
-            }
-            TokenType::INT => {
-                let value = self.current_token.literal.parse().map_err(|_| {
-                    format!("Invalid integer literal: {}", self.current_token.literal)
-                })?;
-                return Ok(Expression::INT(value));
-            }
-            TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
-            TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
+            TokenType::IF => self.parse_if_expression(),
+            TokenType::INT => self.parse_integer_literal(),
+            TokenType::TRUE | TokenType::FALSE => self.parse_boolean_literal(),
             TokenType::BANG | TokenType::MINUS => self.parse_prefix_expression(),
-            TokenType::IDENT => {
-                if Parser::is_operator(&self.peek_token) {
-                    return self.parse_infix_expression(Expression::IDENT(
-                        self.current_token.literal.clone(),
-                    ));
-                }else {
-                    return Ok(Expression::IDENT(self.current_token.literal.clone()));
-                }
-            },
+            TokenType::LPAREN => self.parse_grouped_expression(),
+            TokenType::IDENT => self.parse_identifier_expression(),
             _ => Err(format!(
                 "Unexpected token {:?} in primary expression",
                 self.current_token
             )),
+        }
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, String> {
+        self.next_token(); // Skip '('
+    
+        let expr = self.parse_expression()?; // Parse full expression like 5 + 5
+    
+        // Now advance once to move to the next token, which should be ')'
+        self.next_token();
+    
+        if self.current_token.t != TokenType::RPAREN {
+            return Err(format!(
+                "Expected ')', found {:?} after expression",
+                self.current_token
+            ));
+        }
+        
+        Ok(expr)
+    }
+    
+
+    fn parse_integer_literal(&mut self) -> Result<Expression, String> {
+        let value = self
+            .current_token
+            .literal
+            .parse()
+            .map_err(|_| format!("Invalid integer literal: {}", self.current_token.literal))?;
+        
+        Ok(Expression::INT(value))
+    }
+
+    fn parse_boolean_literal(&mut self) -> Result<Expression, String> {
+        match self.current_token.t {
+            TokenType::TRUE => Ok(Expression::BOOLEAN(true)),
+            TokenType::FALSE => Ok(Expression::BOOLEAN(false)),
+            _ => Err(format!(
+                "Unexpected token {:?} in boolean literal",
+                self.current_token
+            )),
+        }
+    }
+
+    fn parse_identifier_expression(&mut self) -> Result<Expression, String> {
+        if Parser::is_operator(&self.peek_token) {
+            self.parse_infix_expression(Expression::IDENT(self.current_token.literal.clone()))
+        } else {
+            Ok(Expression::IDENT(self.current_token.literal.clone()))
         }
     }
 
@@ -286,4 +329,3 @@ impl Parser {
         })
     }
 }
-
