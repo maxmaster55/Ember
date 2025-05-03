@@ -63,17 +63,12 @@ impl Parser {
             }
         };
 
-        // Move to the next token
-        self.next_token();
-        // expect semicolon
-        if self.current_token.t != TokenType::SEMICOLON {
-            return Err(format!(
-                "Expected ';' after statement, found {:?}",
-                self.current_token
-            ));
+        println!("Current token: {:?}", self.current_token);
+        if self.peek_token.t == TokenType::SEMICOLON {
+            self.next_token();
         }
-        return stmnt;
 
+        return stmnt;
     }
 
 
@@ -148,9 +143,10 @@ impl Parser {
 
     fn parse_if_expression(&mut self) -> Result<Expression, String> {
         self.next_token(); // Skip the "if" token
-
+        
         // Parse the condition
         let cond = self.parse_condition()?;
+
 
         if self.current_token.t != TokenType::LBRACE {
             return Err("Expected '{' after an IF condition".to_string());
@@ -160,10 +156,13 @@ impl Parser {
         let mut code = vec![];
 
         while self.current_token.t != TokenType::RBRACE {
+            // Skip semicolons that appear between statements
+            if self.current_token.t == TokenType::SEMICOLON {
+                self.next_token();
+                continue;
+            }
             let stmnt = self.parse_statement()?;
             code.push(stmnt);
-
-            self.next_token(); // Skip the ';'
         }
 
         // Check for the closing brace
@@ -222,8 +221,7 @@ impl Parser {
 
         // Continue parsing infix expressions while we see operators
         // and we haven't hit a closing parenthesis
-        while Parser::is_operator(&self.peek_token) && self.peek_token.t != TokenType::RPAREN {
-            self.next_token(); // Move to operator
+        while Parser::is_operator(&self.peek_token) {
             left = self.parse_infix_expression(left)?;
         }
 
@@ -231,11 +229,13 @@ impl Parser {
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, String> {
-        // self.next_token(); <-- REMOVE THIS LINE
-    
+        
+        self.next_token();
+        // Check if the next is a )
+
         let operator = self.current_token.literal.clone();
-    
-        self.next_token(); // Move to the right-hand side expression
+
+        self.next_token();
     
         let right = self
             .parse_expression()
@@ -329,3 +329,153 @@ impl Parser {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_parser(input: String) -> Parser {
+        let lexer = Lexer::new(input);
+        Parser::new(lexer)
+    }
+
+    #[test]
+    fn test_parse_let_statement() {
+        let input = "let x = 5;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Let(let_stmt) = &program.statements[0] {
+            assert_eq!(let_stmt.name, "x");
+            if let Expression::INT(value) = let_stmt.value {
+                assert_eq!(value, 5);
+            } else {
+                panic!("Expected integer literal in let statement");
+            }
+        } else {
+            panic!("Expected let statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_return_statement() {
+        let input = "ret 10;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Return(return_stmt) = &program.statements[0] {
+            if let Expression::INT(value) = return_stmt.return_value {
+                assert_eq!(value, 10);
+            } else {
+                panic!("Expected integer literal in return statement");
+            }
+        } else {
+            panic!("Expected return statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_if_expression() {
+        let input = "if x < 10 { let y = 5; } else { ret 20; }".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::IF { condition, consequence, alternative } = &expr_stmt.expression {
+                if let Expression::INFEX { ref operator, .. } = **condition {
+                    assert_eq!(operator, "<");
+                } else {
+                    panic!("Expected infix expression in if condition");
+                }
+
+                assert_eq!(consequence.len(), 1);
+                if let Statement::Let(let_stmt) = &consequence[0] {
+                    assert_eq!(let_stmt.name, "y");
+                } else {
+                    panic!("Expected let statement in if consequence");
+                }
+
+                assert!(alternative.is_some());
+                let alternative = alternative.as_ref().unwrap();
+                assert_eq!(alternative.len(), 1);
+                if let Statement::Return(return_stmt) = &alternative[0] {
+                    if let Expression::INT(value) = return_stmt.return_value {
+                        assert_eq!(value, 20);
+                    } else {
+                        panic!("Expected integer literal in return statement");
+                    }
+                } else {
+                    panic!("Expected return statement in if alternative");
+                }
+            } else {
+                panic!("Expected if expression");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_infix_expression() {
+        let input = "5 + 10 * 2;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::INFEX { operator, .. } = &expr_stmt.expression {
+                assert_eq!(operator, "+");
+            } else {
+                panic!("Expected infix expression");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_boolean_literal() {
+        let input = "true;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::BOOLEAN(value) = &expr_stmt.expression {
+                assert_eq!(*value, true);
+            } else {
+                panic!("Expected boolean literal");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_grouped_expression() {
+        let input = "(5 + 5) * 2;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::INFEX { operator, .. } = &expr_stmt.expression {
+                assert_eq!(operator, "*");
+            } else {
+                panic!("Expected infix expression");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+}
+
