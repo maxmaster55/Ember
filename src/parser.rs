@@ -104,7 +104,110 @@ impl Parser {
         // Construct the let statement
         Ok(Statement::Let( LetStatement{name: identifier,value} ))
     }
-    
+
+
+    fn parse_function_expression(&mut self) -> Result<Expression, String> {
+        
+        // skip the function token
+        self.next_token();
+
+        let name = match &self.current_token.t {
+            TokenType::IDENT => self.current_token.literal.clone(),
+            _ => {
+                return Err(format!(
+                    "Expected identifier, found {:?}",
+                    self.current_token
+                ));
+            }
+        };
+
+        self.next_token();
+
+        if self.current_token.t != TokenType::LPAREN {
+            return Err(format!(
+                "Expected '(', found {:?}",
+                self.current_token
+            ));
+        }
+
+        self.next_token(); // Skip the '('
+
+        let mut parameters = vec![];
+
+        // parse parameters
+        while self.current_token.t != TokenType::RPAREN {
+            if self.current_token.t != TokenType::IDENT {
+                return Err(format!(
+                    "Expected identifier, found {:?}",
+                    self.current_token
+                ));
+            }
+            parameters.push(self.current_token.literal.clone());
+            self.next_token();
+
+            if self.current_token.t == TokenType::COMMA {
+                self.next_token();
+            } else if self.current_token.t != TokenType::RPAREN {
+                return Err(format!(
+                    "Expected ',' or ')', found {:?}",
+                    self.current_token
+                ));
+            }
+        }
+
+        if self.current_token.t != TokenType::RPAREN {
+            return Err(format!(
+                "Expected ')', found {:?}",
+                self.current_token
+            ));
+            
+        }
+
+        self.next_token(); // Skip the ')'
+
+        if self.current_token.t != TokenType::LBRACE {
+            return Err(format!(
+                "Expected '{{', found {:?}",
+                self.current_token
+            ));
+        }
+
+        self.next_token(); // Skip the '{'
+
+
+        let mut body = vec![];
+
+        while self.current_token.t != TokenType::RBRACE {
+            // Skip semicolons that appear between statements
+            if self.current_token.t == TokenType::SEMICOLON {
+                self.next_token();
+                continue;
+            }
+            let stmnt = self.parse_statement()?;
+            body.push(stmnt);
+            
+        };
+
+        // Check for the closing brace
+        if self.current_token.t != TokenType::RBRACE {
+            return Err(format!(
+                "Expected '}}', found {:?}",
+                self.current_token
+            ));
+        }
+
+        self.next_token(); // Skip the '}'
+
+        // Construct the function statement
+
+        let ex = Expression::FUNCTION {
+            name,
+            parameters,
+            body: body
+        };
+
+        return Ok(ex);
+    }
 
 
     fn parse_return_statement(&mut self) -> Result<Statement, String> {
@@ -218,7 +321,7 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_primary_expression()?;
 
-        
+
         while Parser::is_operator(&self.peek_token) {
             left = self.parse_infix_expression(left)?;
         }
@@ -250,12 +353,12 @@ impl Parser {
         })
     }
     
-
     fn parse_primary_expression(&mut self) -> Result<Expression, String> {
 
 
         match self.current_token.t {
             TokenType::IF => self.parse_if_expression(),
+            TokenType::FUNCTION => self.parse_function_expression(),
             TokenType::INT => self.parse_integer_literal(),
             TokenType::TRUE | TokenType::FALSE => self.parse_boolean_literal(),
             TokenType::BANG | TokenType::MINUS => self.parse_prefix_expression(),
@@ -279,7 +382,6 @@ impl Parser {
         Ok(expr)
     }
     
-
     fn parse_integer_literal(&mut self) -> Result<Expression, String> {
         let value = self
             .current_token
@@ -302,10 +404,16 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<Expression, String> {
-        if Parser::is_operator(&self.peek_token) {
-            self.parse_infix_expression(Expression::IDENT(self.current_token.literal.clone()))
+
+        if self.peek_token.t == TokenType::SEMICOLON {
+            return Ok(Expression::IDENT(self.current_token.literal.clone()));
+        }else if Parser::is_operator(&self.peek_token) {
+            return self.parse_infix_expression(Expression::IDENT(self.current_token.literal.clone()))
         } else {
-            Ok(Expression::IDENT(self.current_token.literal.clone()))
+            return Err(format!(
+                "Unexpected token {:?} in identifier expression",
+                self.current_token
+            ))
         }
     }
 
@@ -326,6 +434,8 @@ impl Parser {
         })
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -474,5 +584,48 @@ mod tests {
             panic!("Expected expression statement");
         }
     }
-}
 
+    // test function parser
+    #[test]
+    fn test_parse_function_expression() {
+        let input = "fun myFunc(x, y) { x + y; }".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::FUNCTION { name, parameters, body } = &expr_stmt.expression {
+                assert_eq!(name, "myFunc");
+                assert_eq!(parameters.len(), 2);
+                assert_eq!(parameters[0], "x");
+                assert_eq!(parameters[1], "y");
+                assert_eq!(body.len(), 1);
+            } else {
+                panic!("Expected function expression");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+
+    #[test]
+    fn test_parse_identifier_expression() {
+        let input = "x + 5;".to_string();
+        let mut parser = setup_parser(input);
+
+        let program = parser.parse_program().unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expression(expr_stmt) = &program.statements[0] {
+            if let Expression::INFEX { operator, .. } = &expr_stmt.expression {
+                assert_eq!(operator, "+");
+            } else {
+                panic!("Expected infix expression");
+            }
+        } else {
+            panic!("Expected expression statement");
+        }
+    }
+
+}

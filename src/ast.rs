@@ -1,3 +1,5 @@
+use std::vec;
+
 #[derive(Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
@@ -47,8 +49,9 @@ pub enum Expression {
         alternative: Option<Vec<Statement>>
     },
     FUNCTION {
+        name: String,
         parameters: Vec<String>,
-        body: Box<Statement>,
+        body: Vec<Statement>,
     },
     CALL {
         function: Box<Expression>,
