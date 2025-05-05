@@ -218,17 +218,15 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_primary_expression()?;
 
-
-        if self.peek_token.t == TokenType::RPAREN {
-            self.next_token();
-        }
-
-        // Continue parsing infix expressions while we see operators
-        // and we haven't hit a closing parenthesis
+        
         while Parser::is_operator(&self.peek_token) {
             left = self.parse_infix_expression(left)?;
         }
 
+        if self.peek_token.t == TokenType::RPAREN {
+            self.next_token();
+        }
+        
         Ok(left)
     }
 
