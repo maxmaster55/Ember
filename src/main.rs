@@ -6,6 +6,8 @@ mod lexer;
 mod repl;
 mod parser;
 mod ast;
+mod object;
+mod evaluator;
 
 use repl::start;
 

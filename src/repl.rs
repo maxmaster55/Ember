@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use crate::{lexer::Lexer, parser::Parser};
+use crate::{evaluator, lexer::Lexer, object::Object, parser::Parser};
 
 
 
@@ -28,9 +28,11 @@ pub fn start<R: BufRead, W: Write>(mut reader: R, mut writer: W, is_file: bool) 
 
         let program = parser.parse_program().unwrap();
 
-        for statement in program.statements {
-            writeln!(writer, "{:?}", statement).expect("Error writing output");
+        for stmnt in program.statements {
+            writeln!(writer, "{:?}", evaluator::eval(stmnt).to_string()).expect("Error writing output");
         }
+
+
 
         if is_file {
             break;
